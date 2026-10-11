@@ -1,0 +1,1300 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Игра: У лукоморья и Избушка — А. С. Пушкин</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        html, body {
+            width: 100%; height: 100%; overflow: hidden;
+            font-family: 'Arial', sans-serif;
+            background: #1a2a3a;
+        }
+        .app { display: flex; width: 100vw; height: 100vh; background: #2e4a5a; }
+        
+        .scene-wrapper {
+            flex: 1 1 auto; height: 100%;
+            display: flex; align-items: center; justify-content: center;
+            background: transparent; position: relative; min-width: 0;
+        }
+        .canvas-container {
+            position: relative; width: 100%; height: 100%;
+            max-width: 100%; max-height: 100%;
+            background: transparent;
+        }
+        .canvas-container canvas {
+            display: block; width: 100%; height: 100%;
+            background: transparent; image-rendering: auto; cursor: default;
+        }
+
+        .info-panel {
+            width: calc(35% + 250px); height: 100%;
+            background: #d4edda;
+            box-shadow: -6px 0 20px rgba(0,0,0,0.15);
+            flex-shrink: 0; min-width: 320px;
+            border: 12px solid #1e4a1e;
+            display: flex; flex-direction: column;
+            padding: 25px; overflow-y: auto;
+            position: relative;
+        }
+
+        .square-particle {
+            position: absolute; bottom: -20px; border-radius: 2px;
+            pointer-events: none; z-index: 0;
+            animation: flyUp 3s linear infinite;
+        }
+        @keyframes flyUp {
+            0% { transform: translateY(0) rotate(0deg); opacity: 1; }
+            100% { transform: translateY(-100vh) rotate(360deg); opacity: 0; }
+        }
+
+        .header { text-align: center; margin-bottom: 15px; position: relative; z-index: 1; }
+        .header h1 {
+            color: #3e2723; font-size: clamp(18px, 2vw, 26px);
+            font-weight: bold; margin-bottom: 12px; line-height: 1.4;
+        }
+        .header h1 .line1,
+        .header h1 .line2 { display: block; }
+        
+        .instructions {
+            background-color: rgba(255, 255, 255, 0.6); border-radius: 12px;
+            padding: 12px; border-left: 6px solid #4caf50;
+            color: #3e2723; font-size: clamp(15px, 1.3vw, 19px);
+            font-weight: bold; line-height: 1.4; text-align: center;
+            z-index: 1; position: relative;
+            display: flex; align-items: center; justify-content: center;
+            gap: 10px;
+        }
+        .instructions .cat-instruction { font-size: 1.8em; line-height: 1; }
+
+        .poem-frame {
+            background-color: rgba(255, 255, 255, 0.5); border-radius: 15px;
+            padding: 18px; margin-bottom: 15px; flex-grow: 1;
+            z-index: 1; position: relative;
+            display: flex; flex-direction: column;
+            align-items: center; justify-content: center;
+        }
+
+        .poem-line {
+            font-size: clamp(15px, 1.2vw, 19px); font-weight: bold;
+            color: #1b5e20; line-height: 2.2; margin-bottom: 6px;
+            display: flex; flex-wrap: wrap; 
+            align-items: center; justify-content: center;
+            text-align: center;
+            width: 100%;
+        }
+
+        select {
+            font-family: 'Arial', sans-serif;
+            font-size: 16px; font-weight: bold; color: #1b5e20;
+            background-color: #ffffff; border: 2px solid #4caf50;
+            border-radius: 8px; padding: 5px 10px; margin: 0 6px;
+            cursor: pointer;
+            width: 150px; min-width: 150px; max-width: 150px;
+            text-align: center; text-align-last: center;
+        }
+        select option { text-align: center; }
+        select:focus { outline: none; border-color: #1b5e20; box-shadow: 0 0 0 3px rgba(27, 94, 32, 0.2); }
+
+        .controls {
+            display: flex; justify-content: center; gap: 15px;
+            margin-top: 12px; z-index: 1; position: relative;
+            flex-wrap: wrap;
+        }
+        button {
+            font-family: 'Arial', sans-serif; font-size: clamp(15px, 1.3vw, 18px);
+            font-weight: bold; padding: 12px 28px; border: none;
+            border-radius: 50px; cursor: pointer; transition: transform 0.2s;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.15); text-transform: uppercase;
+        }
+        button:hover { transform: translateY(-2px); }
+        #check-btn { background-color: #4caf50; color: white; }
+        #back-btn { background-color: #ff9800; color: white; margin-top: 25px; z-index: 2; }
+
+        #final-page {
+            text-align: center; padding: 20px; z-index: 1; position: relative;
+            display: none; flex-direction: column; align-items: center; justify-content: flex-start;
+            flex-grow: 1;
+            overflow: hidden;
+        }
+        
+        #final-title {
+            font-size: clamp(22px, 2.8vw, 34px);
+            color: #c62828;
+            font-weight: bold;
+            margin-bottom: 25px;
+            z-index: 2; position: relative;
+            line-height: 1.3;
+            text-align: center;
+        }
+        
+        #final-score {
+            font-size: clamp(28px, 3.5vw, 42px); color: #3e2723; font-weight: bold;
+            margin-bottom: 30px; z-index: 2; position: relative;
+        }
+        #final-message {
+            font-size: clamp(20px, 2.2vw, 28px); color: #1b5e20; font-weight: bold;
+            line-height: 1.5; max-width: 95%; text-align: center;
+            z-index: 2; position: relative;
+            margin-bottom: 30px;
+        }
+
+        .big-emoji {
+            font-size: 15em;
+            line-height: 1;
+            z-index: 2;
+            position: relative;
+            margin-top: 20px;
+        }
+
+        @media (max-width: 1024px) {
+            .app { flex-direction: column; }
+            .scene-wrapper { flex: 0 0 45vh; border-bottom: 12px solid #1e4a1e; }
+            .info-panel { width: 100%; height: 55vh; border: none; border-top: 12px solid #1e4a1e; min-width: 0; }
+        }
+        @media (max-width: 768px) {
+            .header h1 { font-size: 18px; }
+            .instructions { font-size: 15px; padding: 10px; }
+            .poem-line { font-size: 15px; line-height: 2; flex-direction: column; gap: 4px; }
+            select { width: 100%; max-width: 180px; margin: 4px 0; }
+            .big-emoji { font-size: 9em; }
+        }
+        @media (max-width: 480px) {
+            .info-panel { padding: 12px; }
+            .controls { flex-direction: column; gap: 10px; }
+            button { width: 100%; padding: 10px; }
+            .big-emoji { font-size: 7em; }
+        }
+        @media (max-height: 500px) and (orientation: landscape) {
+            .app { flex-direction: row; }
+            .scene-wrapper { flex: 0 0 40vw; border-bottom: none; border-right: 12px solid #1e4a1e; }
+            .info-panel { width: 60vw; height: 100vh; border: none; }
+            .poem-line { font-size: 14px; line-height: 1.8; }
+            select { font-size: 14px; padding: 3px 8px; width: 130px; min-width: 130px; }
+            .big-emoji { font-size: 5em; }
+        }
+    </style>
+</head>
+<body>
+
+<div class="app">
+    <div class="scene-wrapper">
+        <div class="canvas-container">
+            <canvas id="gameCanvas" width="800" height="600"></canvas>
+        </div>
+    </div>
+
+    <main class="info-panel" aria-label="Задания по стихотворению">
+        
+        <header class="header" id="quiz-header">
+            <h1>
+                <span class="line1">Восстанови слова в отрывке</span>
+                <span class="line2">из поэмы «Руслан и Людмила» А. С. Пушкина</span>
+            </h1>
+            <div class="instructions">
+                <span class="cat-instruction">🐈</span>
+                <span>Привет! Я Кот учёный. Выбери правильные слова из выпадающего списка, чтобы восстановить стихотворение.</span>
+            </div>
+        </header>
+
+        <section class="poem-frame" id="poem-container"></section>
+
+        <div class="controls" id="quiz-controls">
+            <button id="check-btn">✅ Проверить результат</button>
+        </div>
+
+        <div id="final-page">
+            <div id="final-title">Результат игры к отрывку из поэмы «Руслан и Людмила» А. С. Пушкина</div>
+            <div id="final-score"></div>
+            <div id="final-message"></div>
+            <div class="big-emoji">🧑‍💻</div>
+            <button id="back-btn" style="display: none;">Вернуться к заданиям</button>
+        </div>
+    </main>
+</div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const poemData = [
+            { pre: "У лукоморья", correct: "зелёный", options: ["высокий", "старый", "крепкий"], post: " дуб;" },
+            { pre: "Златая цепь на дубе том:", isStatic: true },
+            { pre: "И днём и ночью кот", correct: "учёный", options: ["говорящий", "пушистый", "ленивый", "хитрый"] },
+            { pre: "Всё ходит по цепи кругом;", isStatic: true },
+            { pre: "Идёт направо —", correct: "песнь", options: ["шум", "танец", "разговор"], post: " заводит," },
+            { pre: "Налево —", correct: "сказку", options: ["быль", "историю", "правду"], post: " говорит." },
+            { pre: "Там чудеса: там", correct: "леший", options: ["волк", "медведь", "охотник"], post: " бродит," },
+            { pre: "Русалка на ветвях сидит;", isStatic: true },
+            { pre: "Там на неведомых", correct: "дорожках", options: ["тропинках", "полянках", "шоссе", "трассе"] },
+            { pre: "Следы невиданных", correct: "зверей", options: ["птиц", "насекомых", "рыб", "пауков", "динозавров"], post: ";" },
+            { pre: "Избушка там на", correct: "курьих", options: ["медвежьих", "гусиных", "лисьих", "звериных"], post: " ножках" },
+            { pre: "", correct: "стоит", options: ["бежит", "ползёт", "идёт", "пищит", "летит"], post: " без окон, без дверей;" },
+            { pre: "Там", correct: "лес", options: ["луг", "поле", "река", "гора", "степь"], post: " и дол видений полны;" },
+            { pre: "Там о заре", correct: "прихлынут", options: ["прибьют", "приколотят", "прибегут", "приползут"], post: " волны" },
+            { pre: "На брег", correct: "песчаный", options: ["крутой", "каменистый", "сухой", "лесистый"], post: " и пустой," },
+            { pre: "И", correct: "тридцать", options: ["двадцать", "десять", "сорок", "пятьдесят", "шестьдесят"], post: " витязей прекрасных" },
+            { pre: "Чредой из вод", correct: "выходят", options: ["выползают", "выбегают", "выглядывают", "выскакивают"], post: " ясных," },
+            { pre: "И с ними дядька их", correct: "морской", options: ["лесной", "родной", "другой", "степной"], post: ";" },
+            { pre: "Там", correct: "королевич", options: ["королева", "король", "принцесса", "принц", "клоун"], post: " мимоходом" },
+            { pre: "Пленяет", correct: "грозного", options: ["мокрого", "больного", "ужасного", "красивого", "строгого"], post: " царя;" },
+            { pre: "Там в", correct: "облаках", options: ["космосе", "ракете", "небе", "галактике"], post: " перед народом" },
+            { pre: "Через", correct: "леса", options: ["льды", "шоссе", "поля"], post: ", через ", hasSecondBlank: true, correct2: "моря", options2: ["реки", "океаны", "озёра", "болота"] },
+            { pre: "Колдун несёт", correct: "богатыря", options: ["военного", "солдата", "генерала", "колдуна"], post: ";" },
+            { pre: "В темнице там", correct: "царевна", options: ["царь", "царица", "королевич", "король", "принцесса"], post: " тужит," },
+            { pre: "А бурый", correct: "волк", options: ["медведь", "лиса", "петух", "заяц"], post: " ей верно служит;" },
+            { pre: "Там ступа с Бабою -", correct: "ягой", options: ["машей", "оксаной", "татьяной", "яной"] },
+            { pre: "", correct: "идёт", options: ["бежит", "скачет", "летит", "прыгает"], post: ", бредёт сама собой," },
+            { pre: "Там царь", correct: "Кощей", options: ["Олег", "Иван", "Андрей", "Тимофей"], post: " над златом чахнет;" },
+            { pre: "Там", correct: "русский", options: ["немецкий", "польский", "финский"], post: " дух… там Русью пахнет!" }
+        ];
+
+        const poemContainer = document.getElementById('poem-container');
+        const correctAnswersMap = {};
+
+        poemData.forEach((line, index) => {
+            const div = document.createElement('div');
+            div.className = 'poem-line';
+
+            if (line.isStatic) {
+                div.textContent = line.pre;
+                poemContainer.appendChild(div);
+                return;
+            }
+
+            if (line.pre) {
+                const textNode1 = document.createElement('span');
+                textNode1.textContent = line.pre + " ";
+                div.appendChild(textNode1);
+            }
+
+            const select1 = document.createElement('select');
+            select1.id = `blank-${index}-1`;
+            select1.innerHTML = '<option value="" disabled selected>...</option>';
+            
+            const allOptions1 = [line.correct, ...line.options].sort(() => Math.random() - 0.5);
+            allOptions1.forEach(opt => {
+                const option = document.createElement('option');
+                option.value = opt;
+                option.textContent = opt;
+                select1.appendChild(option);
+            });
+            div.appendChild(select1);
+            correctAnswersMap[select1.id] = line.correct;
+
+            if (line.post) {
+                const textNodePost = document.createElement('span');
+                textNodePost.textContent = " " + line.post;
+                div.appendChild(textNodePost);
+            }
+
+            if (line.hasSecondBlank) {
+                const select2 = document.createElement('select');
+                select2.id = `blank-${index}-2`;
+                select2.innerHTML = '<option value="" disabled selected>...</option>';
+                
+                const allOptions2 = [line.correct2, ...line.options2].sort(() => Math.random() - 0.5);
+                allOptions2.forEach(opt => {
+                    const option = document.createElement('option');
+                    option.value = opt;
+                    option.textContent = opt;
+                    select2.appendChild(option);
+                });
+                div.appendChild(select2);
+                correctAnswersMap[select2.id] = line.correct2;
+            }
+
+            poemContainer.appendChild(div);
+        });
+
+        const checkBtn = document.getElementById('check-btn');
+        const finalPage = document.getElementById('final-page');
+        const finalScore = document.getElementById('final-score');
+        const finalMessage = document.getElementById('final-message');
+        const backBtn = document.getElementById('back-btn');
+
+        checkBtn.addEventListener('click', () => {
+            let score = 0;
+            const allSelects = poemContainer.querySelectorAll('select');
+            allSelects.forEach(selectEl => {
+                const selectId = selectEl.id;
+                if (correctAnswersMap.hasOwnProperty(selectId)) {
+                    if (selectEl.value === correctAnswersMap[selectId]) {
+                        score++;
+                    }
+                }
+            });
+
+            document.getElementById('quiz-header').style.display = 'none';
+            poemContainer.style.display = 'none';
+            document.getElementById('quiz-controls').style.display = 'none';
+            finalPage.style.display = 'flex';
+
+            finalScore.textContent = `Из 27 слов верно ${score}`;
+
+            if (score === 27) {
+                finalMessage.textContent = "Молодец! Отлично справился с заданием ученого кота!";
+                backBtn.style.display = 'none';
+            } else {
+                finalMessage.textContent = "Были ошибки! Можешь их исправить, Прочитай еще раз стихотворение и выполни задание ученого кота!";
+                backBtn.style.display = 'block';
+            }
+
+            startFinalAnimation();
+        });
+
+        backBtn.addEventListener('click', () => {
+            finalPage.style.display = 'none';
+            stopFinalAnimation();
+            document.getElementById('quiz-header').style.display = 'block';
+            poemContainer.style.display = 'flex';
+            document.getElementById('quiz-controls').style.display = 'flex';
+        });
+
+        let animationInterval = null;
+
+        function startFinalAnimation() {
+            stopFinalAnimation();
+            const colors = ['#FF5733', '#33FF57', '#3357FF', '#F3FF33', '#FF33F3', '#FF8C00', '#00BCD4'];
+            animationInterval = setInterval(() => {
+                const square = document.createElement('div');
+                square.classList.add('square-particle');
+                square.style.left = Math.random() * 100 + '%';
+                square.style.backgroundColor = colors[Math.floor(Math.random() * colors.length)];
+                const size = 8 + Math.random() * 10;
+                square.style.width = size + 'px';
+                square.style.height = size + 'px';
+                square.style.animationDuration = (2.5 + Math.random() * 3) + 's';
+                finalPage.appendChild(square);
+                setTimeout(() => { 
+                    if (square.parentNode) square.parentNode.removeChild(square); 
+                }, 6000);
+            }, 150);
+        }
+
+        function stopFinalAnimation() {
+            if (animationInterval) {
+                clearInterval(animationInterval);
+                animationInterval = null;
+            }
+            const squares = finalPage.querySelectorAll('.square-particle');
+            squares.forEach(sq => sq.remove());
+        }
+
+        (function() {
+            const canvas = document.getElementById('gameCanvas');
+            const ctx = canvas.getContext('2d');
+            const W = 800, H = 600;
+
+            let doorProgress = 0;
+            let isDoorOpen = false;
+            const DOOR_SPEED = 0.04;
+
+            let owlHeadAngle = 0;
+            let owlHeadDir = 1;
+            let owlBlink = false;
+            let blinkTimer = 0;
+
+            let windowGlow = false;
+            let windowGlowTimer = 0;
+
+            let clouds = [
+                { x: 50,  y: 70,  size: 50, speed: 0.08, alpha: 1 },
+                { x: 250, y: 110, size: 40, speed: 0.12, alpha: 1 },
+                { x: 500, y: 50,  size: 60, speed: 0.18, alpha: 1 },
+                { x: 720, y: 85,  size: 45, speed: 0.1,  alpha: 1 }
+            ];
+
+            let mouseX = 0, mouseY = 0;
+
+            CanvasRenderingContext2D.prototype.roundRect = function(x, y, w, h, r) {
+                if (typeof r === 'number') r = { tl: r, tr: r, br: r, bl: r };
+                const rad = r.tl || 0;
+                this.moveTo(x + rad, y);
+                this.lineTo(x + w - rad, y);
+                this.quadraticCurveTo(x + w, y, x + w, y + rad);
+                this.lineTo(x + w, y + h - rad);
+                this.quadraticCurveTo(x + w, y + h, x + w - rad, y + h);
+                this.lineTo(x + rad, y + h);
+                this.quadraticCurveTo(x, y + h, x, y + h - rad);
+                this.lineTo(x, y + rad);
+                this.quadraticCurveTo(x, y, x + rad, y);
+                this.closePath();
+                return this;
+            };
+
+            function drawTextWithSpacing(text, x, y, spacing) {
+                const chars = text.split('');
+                const widths = chars.map(c => ctx.measureText(c).width);
+                let totalWidth = widths.reduce((a, b) => a + b, 0) + spacing * (chars.length - 1);
+                let curX = x - totalWidth / 2;
+                const prevAlign = ctx.textAlign;
+                ctx.textAlign = 'left';
+                chars.forEach((c, i) => {
+                    ctx.fillText(c, curX, y);
+                    curX += widths[i] + spacing;
+                });
+                ctx.textAlign = prevAlign;
+            }
+
+            function drawTree(x, y, type, size) {
+                const s = size / 300;
+                ctx.fillStyle = '#5a3a1a';
+                const trunkW = 25 * s;
+                const trunkH = 100 * s;
+                ctx.fillRect(x - trunkW / 2, y - trunkH, trunkW, trunkH);
+                ctx.strokeStyle = '#4a2a10';
+                ctx.lineWidth = 1.5 * s;
+                for (let i = 0; i < 5; i++) {
+                    const ly = y - trunkH + 15 * s + i * 18 * s;
+                    ctx.beginPath();
+                    ctx.moveTo(x - trunkW / 2 + 3 * s, ly);
+                    ctx.quadraticCurveTo(x, ly + 4 * s, x + trunkW / 2 - 3 * s, ly - 2 * s);
+                    ctx.stroke();
+                }
+
+                if (type === 'pine') {
+                    ctx.fillStyle = '#1a4a1a';
+                    for (let i = 0; i < 3; i++) {
+                        const lw = (80 - i * 18) * s;
+                        const lh = 80 * s;
+                        const ly = y - trunkH - i * 55 * s - lh;
+                        ctx.beginPath();
+                        ctx.moveTo(x, ly);
+                        ctx.lineTo(x - lw, ly + lh);
+                        ctx.lineTo(x + lw, ly + lh);
+                        ctx.closePath();
+                        ctx.fill();
+                    }
+                    ctx.fillStyle = '#143d14';
+                    for (let i = 0; i < 3; i++) {
+                        const lw = (60 - i * 14) * s;
+                        const lh = 55 * s;
+                        const ly = y - trunkH - i * 55 * s - lh + 12 * s;
+                        ctx.beginPath();
+                        ctx.moveTo(x, ly);
+                        ctx.lineTo(x - lw, ly + lh);
+                        ctx.lineTo(x + lw, ly + lh);
+                        ctx.closePath();
+                        ctx.fill();
+                    }
+                } else {
+                    ctx.fillStyle = '#1a4a1a';
+                    const cr = 65 * s;
+                    const cy = y - trunkH - cr * 0.7;
+                    ctx.beginPath();
+                    ctx.arc(x, cy, cr, 0, Math.PI * 2);
+                    ctx.fill();
+                    ctx.beginPath();
+                    ctx.arc(x - cr * 0.7, cy + cr * 0.3, cr * 0.8, 0, Math.PI * 2);
+                    ctx.fill();
+                    ctx.beginPath();
+                    ctx.arc(x + cr * 0.7, cy + cr * 0.3, cr * 0.8, 0, Math.PI * 2);
+                    ctx.fill();
+                    ctx.beginPath();
+                    ctx.arc(x, cy - cr * 0.5, cr * 0.7, 0, Math.PI * 2);
+                    ctx.fill();
+                    ctx.fillStyle = '#143d14';
+                    ctx.beginPath();
+                    ctx.arc(x - cr * 0.3, cy + cr * 0.1, cr * 0.5, 0, Math.PI * 2);
+                    ctx.fill();
+                    ctx.beginPath();
+                    ctx.arc(x + cr * 0.4, cy - cr * 0.2, cr * 0.45, 0, Math.PI * 2);
+                    ctx.fill();
+                }
+            }
+
+            function drawForest() {
+                ctx.shadowBlur = 0;
+                ctx.shadowOffsetY = 0;
+                const trees = [
+                    { x: 50,  y: 480, type: 'leaf', size: 300 },
+                    { x: 110, y: 470, type: 'pine', size: 300 },
+                    { x: 170, y: 475, type: 'leaf', size: 300 },
+                    { x: 220, y: 468, type: 'pine', size: 310 },
+                    { x: 280, y: 465, type: 'pine', size: 320 },
+                    { x: 290, y: 465, type: 'leaf', size: 320 },
+                    { x: 320, y: 460, type: 'pine', size: 350 },
+                    { x: 400, y: 450, type: 'pine', size: 380 },
+                    { x: 480, y: 460, type: 'pine', size: 350 },
+                    { x: 550, y: 465, type: 'pine', size: 320 },
+                    { x: 630, y: 480, type: 'pine', size: 300 },
+                    { x: 700, y: 472, type: 'pine', size: 310 },
+                    { x: 690, y: 470, type: 'leaf', size: 300 },
+                    { x: 750, y: 475, type: 'pine', size: 300 },
+                    { x: 790, y: 480, type: 'leaf', size: 300 }
+                ];
+                trees.forEach(t => drawTree(t.x, t.y, t.type, t.size));
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'bottom';
+                ctx.font = '100px sans-serif';
+                ctx.fillText('🪵', 50, 540);
+                ctx.fillText('🪵', 750, 535);
+                ctx.shadowBlur = 0;
+                ctx.shadowOffsetY = 0;
+            }
+
+            function drawGrass() {
+                const grassColor = '#3a8a2a';
+                const darkGrass = '#2d6a1e';
+                ctx.shadowBlur = 0;
+                for (let row = 0; row < 12; row++) {
+                    const yBase = 530 + row * 7;
+                    const count = 70 + row * 6;
+                    for (let i = 0; i < count; i++) {
+                        const x = (i / count) * W + Math.sin(i * 0.7 + row * 1.5) * 5;
+                        const height = 12 + Math.sin(i * 1.3 + row * 2) * 10 + 6;
+                        const color = (i % 2 === 0) ? grassColor : darkGrass;
+                        ctx.fillStyle = color;
+                        ctx.beginPath();
+                        ctx.moveTo(x, yBase);
+                        ctx.lineTo(x - 3, yBase - height);
+                        ctx.lineTo(x + 3, yBase - height * 0.6);
+                        ctx.closePath();
+                        ctx.fill();
+                        ctx.beginPath();
+                        ctx.moveTo(x, yBase);
+                        ctx.lineTo(x + 4, yBase - height * 0.8);
+                        ctx.lineTo(x - 2, yBase - height * 0.5);
+                        ctx.closePath();
+                        ctx.fill();
+                    }
+                }
+                for (let i = 0; i < 160; i++) {
+                    const x = (i / 160) * W + Math.sin(i * 0.9) * 12;
+                    const yBase = 585 + Math.sin(i * 0.5) * 4;
+                    const height = 25 + Math.sin(i * 1.7) * 15;
+                    ctx.fillStyle = (i % 3 === 0) ? '#4a9a3a' : '#3a7a2a';
+                    ctx.beginPath();
+                    ctx.moveTo(x, yBase);
+                    ctx.lineTo(x - 4, yBase - height);
+                    ctx.lineTo(x + 4, yBase - height * 0.7);
+                    ctx.closePath();
+                    ctx.fill();
+                    ctx.beginPath();
+                    ctx.moveTo(x + 6, yBase);
+                    ctx.lineTo(x + 3, yBase - height * 0.6);
+                    ctx.lineTo(x + 9, yBase - height * 0.3);
+                    ctx.closePath();
+                    ctx.fill();
+                }
+            }
+
+            function drawClouds() {
+                clouds.forEach(c => {
+                    if (c.x < -c.size * 2) {
+                        c.alpha = 0;
+                    } else if (c.x < 0) {
+                        c.alpha = (c.x + c.size * 2) / (c.size * 2);
+                    } else {
+                        c.alpha = 1;
+                    }
+                    ctx.save();
+                    ctx.globalAlpha = c.alpha;
+                    ctx.fillStyle = 'rgba(255,255,255,0.6)';
+                    const x = c.x, y = c.y, size = c.size;
+                    ctx.beginPath();
+                    ctx.arc(x, y, size * 0.6, 0, Math.PI * 2);
+                    ctx.arc(x + size * 0.7, y - size * 0.2, size * 0.8, 0, Math.PI * 2);
+                    ctx.arc(x + size * 1.2, y + size * 0.1, size * 0.6, 0, Math.PI * 2);
+                    ctx.arc(x + size * 0.4, y + size * 0.2, size * 0.5, 0, Math.PI * 2);
+                    ctx.fill();
+                    ctx.restore();
+                });
+            }
+
+            function drawBabaYaga() {
+                const t = Date.now() / 600;
+                const bobY = Math.sin(t) * 3;
+                const bobX = Math.cos(t * 0.7) * 2;
+                const tilt = Math.sin(t * 0.8) * 0.05;
+                const cx = 120 + bobX;
+                const cy = 90 + bobY;
+
+                ctx.save();
+                ctx.translate(cx, cy);
+                ctx.rotate(tilt);
+
+                ctx.save();
+                ctx.rotate(-0.3);
+                ctx.strokeStyle = '#6B4423';
+                ctx.lineWidth = 3;
+                ctx.beginPath();
+                ctx.moveTo(-45, 5);
+                ctx.lineTo(30, -10);
+                ctx.stroke();
+                ctx.fillStyle = '#D4A84A';
+                ctx.beginPath();
+                ctx.moveTo(-45, 5);
+                ctx.lineTo(-70, -5);
+                ctx.lineTo(-72, 5);
+                ctx.lineTo(-70, 15);
+                ctx.lineTo(-45, 8);
+                ctx.closePath();
+                ctx.fill();
+                ctx.strokeStyle = '#B8902A';
+                ctx.lineWidth = 1;
+                for (let i = -3; i <= 3; i++) {
+                    ctx.beginPath();
+                    ctx.moveTo(-45, 6 + i * 0.5);
+                    ctx.lineTo(-70, 5 + i * 2);
+                    ctx.stroke();
+                }
+                ctx.strokeStyle = '#5A3A1A';
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+                ctx.moveTo(-48, 2);
+                ctx.lineTo(-48, 10);
+                ctx.stroke();
+                ctx.restore();
+
+                ctx.save();
+                ctx.fillStyle = 'rgba(0,0,0,0.2)';
+                ctx.beginPath();
+                ctx.ellipse(0, 25, 28, 5, 0, 0, Math.PI * 2);
+                ctx.fill();
+                const stupaGrad = ctx.createLinearGradient(-22, 0, 22, 0);
+                stupaGrad.addColorStop(0, '#5A3A1A');
+                stupaGrad.addColorStop(0.5, '#8B5A2B');
+                stupaGrad.addColorStop(1, '#4A2A10');
+                ctx.fillStyle = stupaGrad;
+                ctx.beginPath();
+                ctx.moveTo(-22, -5);
+                ctx.lineTo(-25, 20);
+                ctx.lineTo(25, 20);
+                ctx.lineTo(22, -5);
+                ctx.closePath();
+                ctx.fill();
+                ctx.strokeStyle = '#2A1A0A';
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+                ctx.moveTo(-23, 2);
+                ctx.lineTo(23, 2);
+                ctx.stroke();
+                ctx.beginPath();
+                ctx.moveTo(-24, 14);
+                ctx.lineTo(24, 14);
+                ctx.stroke();
+                ctx.fillStyle = '#2A1A0A';
+                ctx.beginPath();
+                ctx.ellipse(0, -5, 22, 5, 0, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.fillStyle = '#1A0A05';
+                ctx.beginPath();
+                ctx.ellipse(0, -5, 18, 3.5, 0, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.restore();
+
+                ctx.fillStyle = '#2A1A2A';
+                ctx.beginPath();
+                ctx.moveTo(-15, -5);
+                ctx.quadraticCurveTo(-18, -25, -10, -30);
+                ctx.lineTo(10, -30);
+                ctx.quadraticCurveTo(18, -25, 15, -5);
+                ctx.closePath();
+                ctx.fill();
+                ctx.fillStyle = '#4A2A3A';
+                ctx.fillRect(-8, -20, 6, 5);
+                ctx.fillRect(5, -15, 5, 4);
+
+                ctx.strokeStyle = '#D0D0D0';
+                ctx.lineWidth = 1.5;
+                ctx.lineCap = 'round';
+                for (let i = 0; i < 5; i++) {
+                    ctx.beginPath();
+                    ctx.moveTo(-8 + i * 2, -45);
+                    ctx.quadraticCurveTo(-10 + i * 2, -35, -12 + i * 2, -25);
+                    ctx.stroke();
+                }
+                for (let i = 0; i < 5; i++) {
+                    ctx.beginPath();
+                    ctx.moveTo(8 - i * 2, -45);
+                    ctx.quadraticCurveTo(10 - i * 2, -35, 12 - i * 2, -25);
+                    ctx.stroke();
+                }
+                for (let i = 0; i < 4; i++) {
+                    ctx.beginPath();
+                    ctx.moveTo(-5 + i * 3, -48);
+                    ctx.quadraticCurveTo(-6 + i * 3, -42, -7 + i * 3, -35);
+                    ctx.stroke();
+                }
+
+                ctx.fillStyle = '#C9A882';
+                ctx.beginPath();
+                ctx.arc(0, -38, 10, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.fillStyle = '#B8906A';
+                ctx.beginPath();
+                ctx.moveTo(-2, -36);
+                ctx.quadraticCurveTo(10, -36, 8, -32);
+                ctx.quadraticCurveTo(7, -30, 4, -29);
+                ctx.quadraticCurveTo(2, -30, 0, -32);
+                ctx.closePath();
+                ctx.fill();
+                ctx.fillStyle = '#5A3A2A';
+                ctx.beginPath();
+                ctx.arc(6, -33, 1.2, 0, Math.PI * 2);
+                ctx.fill();
+
+                ctx.fillStyle = '#FFF';
+                ctx.beginPath();
+                ctx.arc(-5, -40, 2.5, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.fillStyle = '#2A1A0A';
+                ctx.beginPath();
+                ctx.arc(-5, -40, 1.5, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.fillStyle = '#FFF';
+                ctx.beginPath();
+                ctx.arc(-4.5, -40.5, 0.6, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.strokeStyle = '#2A1A0A';
+                ctx.lineWidth = 1.8;
+                ctx.beginPath();
+                ctx.moveTo(-8, -43);
+                ctx.quadraticCurveTo(-5, -44, -2, -42);
+                ctx.stroke();
+                ctx.strokeStyle = '#8A6A4A';
+                ctx.lineWidth = 0.5;
+                ctx.beginPath();
+                ctx.moveTo(-8, -39);
+                ctx.lineTo(-9, -38);
+                ctx.moveTo(-8, -41);
+                ctx.lineTo(-9, -42);
+                ctx.stroke();
+
+                ctx.fillStyle = '#FFF';
+                ctx.beginPath();
+                ctx.arc(3, -40, 2, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.fillStyle = '#2A1A0A';
+                ctx.beginPath();
+                ctx.arc(3, -40, 1.2, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.fillStyle = '#FFF';
+                ctx.beginPath();
+                ctx.arc(3.3, -40.3, 0.5, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.strokeStyle = '#2A1A0A';
+                ctx.lineWidth = 1.5;
+                ctx.beginPath();
+                ctx.moveTo(1, -42);
+                ctx.quadraticCurveTo(3, -43, 5, -42);
+                ctx.stroke();
+
+                ctx.strokeStyle = '#5A1A1A';
+                ctx.lineWidth = 1.2;
+                ctx.beginPath();
+                ctx.moveTo(-3, -33);
+                ctx.quadraticCurveTo(0, -31, 3, -33);
+                ctx.stroke();
+                ctx.fillStyle = '#FFF';
+                ctx.beginPath();
+                ctx.moveTo(-1, -33);
+                ctx.lineTo(0, -31);
+                ctx.lineTo(1, -33);
+                ctx.closePath();
+                ctx.fill();
+
+                ctx.strokeStyle = '#888';
+                ctx.lineWidth = 0.8;
+                for (let i = 0; i < 4; i++) {
+                    ctx.beginPath();
+                    ctx.moveTo(-3 + i * 2, -30);
+                    ctx.lineTo(-4 + i * 2, -25);
+                    ctx.stroke();
+                }
+                ctx.restore();
+            }
+
+            function drawSwanOnStump() {
+                const stumpX = 750;
+                const stumpY = 535;
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'bottom';
+                ctx.font = '100px sans-serif';
+                ctx.fillText('🦢', stumpX, stumpY - 60);
+            }
+
+            function drawHut(scale) {
+                ctx.save();
+                const cx = W / 2;
+                const cy = H / 2 + 80;
+                ctx.translate(cx, cy);
+                ctx.scale(scale, scale);
+                drawLegs();
+                drawWalls();
+                drawRoof();
+                drawChimney();
+                drawWindow();
+                drawDoor(doorProgress, 40, -40);
+                ctx.restore();
+            }
+
+            function drawChimney() {
+                const chX = 55, chW = 22, chH = 35;
+                const chBaseY = -74;
+                const chTopY = chBaseY - chH;
+                ctx.save();
+                ctx.beginPath();
+                ctx.moveTo(-150, -200);
+                ctx.lineTo(150, -200);
+                ctx.lineTo(150, -50);
+                ctx.lineTo(95, -50);
+                ctx.lineTo(0, -130);
+                ctx.lineTo(-95, -50);
+                ctx.lineTo(-150, -50);
+                ctx.closePath();
+                ctx.clip();
+                ctx.shadowColor = 'rgba(0,0,0,0.3)';
+                ctx.shadowBlur = 8;
+                ctx.shadowOffsetY = 3;
+                const grad = ctx.createLinearGradient(chX - chW / 2, chTopY, chX + chW / 2, chTopY);
+                grad.addColorStop(0, '#8B3A2A');
+                grad.addColorStop(0.5, '#B85040');
+                grad.addColorStop(1, '#6B2A1A');
+                ctx.fillStyle = grad;
+                ctx.fillRect(chX - chW / 2, chTopY, chW, chH);
+                ctx.shadowBlur = 0;
+                ctx.shadowOffsetY = 0;
+                ctx.strokeStyle = 'rgba(40, 20, 10, 0.5)';
+                ctx.lineWidth = 1;
+                const brickH = 8;
+                for (let i = 1; i < Math.floor(chH / brickH); i++) {
+                    const ly = chTopY + i * brickH;
+                    ctx.beginPath();
+                    ctx.moveTo(chX - chW / 2, ly);
+                    ctx.lineTo(chX + chW / 2, ly);
+                    ctx.stroke();
+                }
+                for (let i = 0; i < Math.floor(chH / brickH); i++) {
+                    const ly = chTopY + i * brickH;
+                    const offset = (i % 2 === 0) ? 0 : chW / 4;
+                    for (let j = 0; j < 3; j++) {
+                        const lx = chX - chW / 2 + offset + j * (chW / 2);
+                        if (lx > chX - chW / 2 && lx < chX + chW / 2) {
+                            ctx.beginPath();
+                            ctx.moveTo(lx, ly);
+                            ctx.lineTo(lx, ly + brickH);
+                            ctx.stroke();
+                        }
+                    }
+                }
+                ctx.fillStyle = '#5A2015';
+                ctx.fillRect(chX - chW / 2 - 3, chTopY - 4, chW + 6, 6);
+                ctx.fillStyle = '#3A1510';
+                ctx.fillRect(chX - chW / 2 - 3, chTopY - 4, chW + 6, 2);
+                ctx.fillStyle = '#1A0A05';
+                ctx.beginPath();
+                ctx.ellipse(chX, chTopY - 1, chW / 2 - 2, 3, 0, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.restore();
+            }
+
+            function drawLegs() {
+                function drawOneLeg(xOff, yOff, dir) {
+                    ctx.save();
+                    ctx.translate(xOff, yOff);
+                    ctx.shadowColor = 'rgba(0,0,0,0.3)';
+                    ctx.shadowBlur = 10;
+                    ctx.shadowOffsetY = 4;
+                    const grad = ctx.createLinearGradient(-8, 0, 8, 0);
+                    grad.addColorStop(0, '#A67B5B');
+                    grad.addColorStop(0.4, '#D28C4A');
+                    grad.addColorStop(0.8, '#B87B3E');
+                    ctx.fillStyle = grad;
+                    ctx.beginPath();
+                    ctx.roundRect(-8, -30, 16, 35, 6);
+                    ctx.fill();
+                    ctx.fillStyle = '#C4823A';
+                    ctx.shadowBlur = 8;
+                    ctx.beginPath();
+                    ctx.ellipse(0, 0, 12, 8, 0, 0, Math.PI * 2);
+                    ctx.fill();
+                    ctx.shadowBlur = 8;
+                    ctx.fillStyle = '#D28C4A';
+                    ctx.strokeStyle = '#B87333';
+                    ctx.lineWidth = 2;
+                    const fingerSpread = 0.7;
+                    const fingerLen = 18;
+                    for (let i = -1; i <= 1; i++) {
+                        const ang = i * fingerSpread + (dir > 0 ? 0.2 : -0.2);
+                        const fx = Math.sin(ang) * fingerLen * 0.9;
+                        const fy = Math.cos(ang) * fingerLen * 0.9 + 8;
+                        ctx.beginPath();
+                        ctx.moveTo(0, 8);
+                        ctx.quadraticCurveTo(fx * 0.5, fy * 0.5 + 8, fx, fy);
+                        ctx.strokeStyle = '#B87333';
+                        ctx.lineWidth = 4;
+                        ctx.stroke();
+                        ctx.beginPath();
+                        ctx.moveTo(fx, fy);
+                        ctx.lineTo(fx + Math.sin(ang) * 10, fy + 10);
+                        ctx.strokeStyle = '#8B5A2B';
+                        ctx.lineWidth = 2.5;
+                        ctx.stroke();
+                        ctx.fillStyle = '#C4823A';
+                        ctx.beginPath();
+                        ctx.arc(fx * 0.6, fy * 0.6 + 8, 4, 0, Math.PI * 2);
+                        ctx.fill();
+                    }
+                    ctx.restore();
+                }
+                drawOneLeg(-45, 65, -1);
+                drawOneLeg(45, 65, 1);
+            }
+
+            function drawWalls() {
+                const wallW = 150, wallH = 120;
+                const x = -wallW / 2, y = -wallH / 2 - 10;
+                ctx.shadowColor = 'rgba(0,0,0,0.2)';
+                ctx.shadowBlur = 16;
+                ctx.shadowOffsetY = 6;
+                ctx.fillStyle = '#8B6B4A';
+                ctx.beginPath();
+                ctx.roundRect(x, y, wallW, wallH, 8);
+                ctx.fill();
+                ctx.shadowBlur = 4;
+                ctx.shadowOffsetY = 2;
+                const logCount = 8;
+                const logH = wallH / logCount;
+                for (let i = 0; i < logCount; i++) {
+                    const ly = y + i * logH + logH / 2;
+                    const lw = wallW - 6 - Math.sin(i * 1.5) * 6;
+                    const lx = x + (wallW - lw) / 2;
+                    const grad = ctx.createLinearGradient(lx, ly - logH / 2, lx, ly + logH / 2);
+                    const lightness = 0.6 + 0.4 * (i / logCount);
+                    grad.addColorStop(0, `hsl(30, 35%, ${lightness * 50 + 20}%)`);
+                    grad.addColorStop(0.5, `hsl(30, 40%, ${lightness * 40 + 30}%)`);
+                    grad.addColorStop(1, `hsl(30, 35%, ${lightness * 45 + 20}%)`);
+                    ctx.fillStyle = grad;
+                    ctx.beginPath();
+                    ctx.roundRect(lx, ly - logH / 2 + 2, lw, logH - 4, 4);
+                    ctx.fill();
+                    ctx.strokeStyle = `rgba(60, 40, 20, 0.2)`;
+                    ctx.lineWidth = 1;
+                    for (let k = 0; k < 3; k++) {
+                        const tx = lx + 10 + k * 20 + i * 3;
+                        ctx.beginPath();
+                        ctx.moveTo(tx, ly - logH / 3);
+                        ctx.quadraticCurveTo(tx + 8, ly, tx - 4, ly + logH / 3);
+                        ctx.stroke();
+                    }
+                }
+                ctx.shadowBlur = 6;
+                ctx.fillStyle = '#7A5C3A';
+                for (let i = 0; i < 4; i++) {
+                    const ty = y + (i + 0.5) * (wallH / 4);
+                    ctx.beginPath();
+                    ctx.arc(x + 2, ty, 8, 0, Math.PI * 2);
+                    ctx.fill();
+                    ctx.beginPath();
+                    ctx.arc(x + wallW - 2, ty, 8, 0, Math.PI * 2);
+                    ctx.fill();
+                }
+            }
+
+            function drawRoof() {
+                const roofW = 190, roofH = 80;
+                const x = -roofW / 2, y = -120 - 10;
+                ctx.shadowColor = 'rgba(0,0,0,0.25)';
+                ctx.shadowBlur = 20;
+                ctx.shadowOffsetY = 6;
+                ctx.beginPath();
+                ctx.moveTo(x, y + roofH);
+                ctx.lineTo(0, y);
+                ctx.lineTo(x + roofW, y + roofH);
+                ctx.closePath();
+                const grad = ctx.createLinearGradient(0, y, 0, y + roofH);
+                grad.addColorStop(0, '#A0522D');
+                grad.addColorStop(0.5, '#8B4513');
+                grad.addColorStop(1, '#6B3410');
+                ctx.fillStyle = grad;
+                ctx.fill();
+                ctx.shadowBlur = 8;
+                ctx.fillStyle = '#6B3410';
+                ctx.beginPath();
+                ctx.moveTo(-6, y + 2);
+                ctx.lineTo(0, y - 10);
+                ctx.lineTo(6, y + 2);
+                ctx.fill();
+            }
+
+            function drawWindow() {
+                const wx = -35, wy = -40, ww = 45, wh = 45;
+                ctx.shadowColor = 'rgba(0,0,0,0.3)';
+                ctx.shadowBlur = 12;
+                ctx.shadowOffsetY = 4;
+                ctx.fillStyle = '#5D3A1A';
+                ctx.beginPath();
+                ctx.roundRect(wx - 4, wy - 4, ww + 8, wh + 8, 6);
+                ctx.fill();
+                const glowColor = windowGlow ? '#FFD700' : '#FFE4A0';
+                const grad = ctx.createRadialGradient(wx + 10, wy + 10, 5, wx + ww / 2, wy + wh / 2, 40);
+                grad.addColorStop(0, glowColor);
+                grad.addColorStop(0.5, windowGlow ? '#FFA500' : '#87CEEB');
+                grad.addColorStop(1, windowGlow ? '#FF8C00' : '#4A6A8A');
+                ctx.fillStyle = grad;
+                ctx.shadowBlur = windowGlow ? 40 : 20;
+                ctx.shadowColor = windowGlow ? 'rgba(255, 200, 0, 0.6)' : 'rgba(255, 220, 100, 0.3)';
+                ctx.beginPath();
+                ctx.roundRect(wx, wy, ww, wh, 4);
+                ctx.fill();
+                ctx.shadowBlur = 0;
+                ctx.strokeStyle = '#3D2814';
+                ctx.lineWidth = 4;
+                ctx.beginPath();
+                ctx.moveTo(wx + ww / 2, wy);
+                ctx.lineTo(wx + ww / 2, wy + wh);
+                ctx.moveTo(wx, wy + wh / 2);
+                ctx.lineTo(wx + ww, wy + wh / 2);
+                ctx.stroke();
+                ctx.fillStyle = 'rgba(255, 255, 255, 0.25)';
+                ctx.beginPath();
+                ctx.moveTo(wx + 6, wy + 6);
+                ctx.lineTo(wx + 20, wy + 6);
+                ctx.lineTo(wx + 6, wy + 20);
+                ctx.fill();
+            }
+
+            function drawDoor(progress, dxOffset = 0, dyOffset = 0) {
+                const doorW = 44, doorH = 70;
+                const dx = -doorW / 2 + dxOffset;
+                const dy = 10 + dyOffset;
+                ctx.shadowColor = 'rgba(0,0,0,0.3)';
+                ctx.shadowBlur = 12;
+                ctx.shadowOffsetY = 4;
+                if (progress > 0.1) {
+                    ctx.fillStyle = '#1A0F08';
+                    ctx.shadowBlur = 6;
+                    ctx.beginPath();
+                    ctx.roundRect(dx + 2, dy, doorW - 4, doorH, 4);
+                    ctx.fill();
+                }
+                const currentW = doorW * (1 - progress);
+                if (currentW > 2) {
+                    ctx.shadowBlur = 14;
+                    ctx.shadowOffsetY = 4;
+                    const grad = ctx.createLinearGradient(dx, dy, dx + currentW, dy);
+                    grad.addColorStop(0, '#8B5A2B');
+                    grad.addColorStop(0.3, '#A67B5B');
+                    grad.addColorStop(0.7, '#B87B3E');
+                    grad.addColorStop(1, '#6B3F1F');
+                    ctx.fillStyle = grad;
+                    ctx.beginPath();
+                    ctx.roundRect(dx, dy, currentW, doorH, 4);
+                    ctx.fill();
+                    ctx.strokeStyle = 'rgba(50, 30, 10, 0.3)';
+                    ctx.lineWidth = 1.5;
+                    for (let i = 0; i < 4; i++) {
+                        const xx = dx + 6 + i * Math.max(1, (currentW - 12) / 3);
+                        if (xx < dx + currentW - 4) {
+                            ctx.beginPath();
+                            ctx.moveTo(xx, dy + 4);
+                            ctx.lineTo(xx, dy + doorH - 4);
+                            ctx.stroke();
+                        }
+                    }
+                    ctx.fillStyle = '#3D2814';
+                    ctx.beginPath();
+                    ctx.arc(dx + 6, dy + 12, 4, 0, Math.PI * 2);
+                    ctx.fill();
+                    ctx.beginPath();
+                    ctx.arc(dx + 6, dy + doorH - 12, 4, 0, Math.PI * 2);
+                    ctx.fill();
+                    if (!isDoorOpen && currentW > 18) {
+                        ctx.save();
+                        const plateW = Math.min(34, currentW - 4);
+                        const plateH = 20;
+                        const plateX = dx + (currentW - plateW) / 2;
+                        const plateY = dy + 22;
+                        ctx.shadowBlur = 3;
+                        ctx.shadowColor = 'rgba(0,0,0,0.3)';
+                        ctx.fillStyle = '#F5E6C8';
+                        ctx.fillRect(plateX, plateY, plateW, plateH);
+                        ctx.strokeStyle = '#8B6B4A';
+                        ctx.lineWidth = 1;
+                        ctx.strokeRect(plateX, plateY, plateW, plateH);
+                        ctx.shadowBlur = 0;
+                        ctx.fillStyle = '#3D2814';
+                        ctx.font = 'bold 6px Arial';
+                        ctx.textBaseline = 'middle';
+                        drawTextWithSpacing("Нажми -", dx + currentW / 2 + 2, dy + 29, 1.5);
+                        ctx.textAlign = 'center';
+                        ctx.fillText("на дверь!", dx + currentW / 2, dy + 37);
+                        ctx.restore();
+                    }
+                }
+                if (progress > 0.9) {
+                    ctx.shadowBlur = 40;
+                    ctx.shadowColor = 'rgba(255, 200, 100, 0.4)';
+                    ctx.fillStyle = 'rgba(255, 200, 100, 0.1)';
+                    ctx.beginPath();
+                    ctx.roundRect(dx + 4, dy + 4, doorW - 8, doorH - 8, 4);
+                    ctx.fill();
+                }
+            }
+
+            function drawOwlOnStump() {
+                const stumpX = 50, stumpY = 540;
+                const owlX = stumpX, owlY = stumpY - 130;
+                ctx.save();
+                ctx.translate(owlX, owlY);
+                ctx.shadowColor = 'rgba(0,0,0,0.3)';
+                ctx.shadowBlur = 15;
+                ctx.shadowOffsetY = 5;
+                ctx.fillStyle = '#6B4F3A';
+                ctx.beginPath();
+                ctx.ellipse(0, 10, 30, 35, 0, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.fillStyle = '#D4B08C';
+                ctx.beginPath();
+                ctx.ellipse(0, 15, 18, 22, 0, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.fillStyle = '#5A3E2E';
+                ctx.beginPath();
+                ctx.ellipse(-28, 10, 12, 28, -0.2, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.beginPath();
+                ctx.ellipse(28, 10, 12, 28, 0.2, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.strokeStyle = '#3D2814';
+                ctx.lineWidth = 3;
+                ctx.lineCap = 'round';
+                ctx.beginPath(); ctx.moveTo(-15, 40); ctx.quadraticCurveTo(-18, 48, -20, 52); ctx.stroke();
+                ctx.beginPath(); ctx.moveTo(-12, 40); ctx.quadraticCurveTo(-12, 48, -12, 52); ctx.stroke();
+                ctx.beginPath(); ctx.moveTo(-9, 40); ctx.quadraticCurveTo(-6, 48, -4, 52); ctx.stroke();
+                ctx.beginPath(); ctx.moveTo(15, 40); ctx.quadraticCurveTo(18, 48, 20, 52); ctx.stroke();
+                ctx.beginPath(); ctx.moveTo(12, 40); ctx.quadraticCurveTo(12, 48, 12, 52); ctx.stroke();
+                ctx.beginPath(); ctx.moveTo(9, 40); ctx.quadraticCurveTo(6, 48, 4, 52); ctx.stroke();
+                ctx.save();
+                ctx.translate(0, -15);
+                ctx.rotate(owlHeadAngle * Math.PI / 180);
+                ctx.shadowBlur = 10;
+                ctx.fillStyle = '#6B4F3A';
+                ctx.beginPath(); ctx.arc(0, 0, 20, 0, Math.PI * 2); ctx.fill();
+                ctx.fillStyle = '#5A3E2E';
+                ctx.beginPath(); ctx.moveTo(-16, -12); ctx.lineTo(-22, -28); ctx.lineTo(-8, -18); ctx.fill();
+                ctx.beginPath(); ctx.moveTo(16, -12); ctx.lineTo(22, -28); ctx.lineTo(8, -18); ctx.fill();
+                const eyeOpen = !owlBlink;
+                ctx.shadowBlur = 8;
+                ctx.shadowColor = 'rgba(0,0,0,0.3)';
+                ctx.fillStyle = '#FFF';
+                ctx.beginPath(); ctx.arc(-8, -4, 8, 0, Math.PI * 2); ctx.fill();
+                if (eyeOpen) {
+                    ctx.fillStyle = '#FFD700'; ctx.beginPath(); ctx.arc(-8, -4, 5, 0, Math.PI * 2); ctx.fill();
+                    ctx.fillStyle = '#111'; ctx.beginPath(); ctx.arc(-6, -2, 3, 0, Math.PI * 2); ctx.fill();
+                } else {
+                    ctx.strokeStyle = '#3D2814'; ctx.lineWidth = 2;
+                    ctx.beginPath(); ctx.moveTo(-12, -4); ctx.lineTo(-4, -4); ctx.stroke();
+                }
+                ctx.fillStyle = '#FFF';
+                ctx.beginPath(); ctx.arc(8, -4, 8, 0, Math.PI * 2); ctx.fill();
+                if (eyeOpen) {
+                    ctx.fillStyle = '#FFD700'; ctx.beginPath(); ctx.arc(8, -4, 5, 0, Math.PI * 2); ctx.fill();
+                    ctx.fillStyle = '#111'; ctx.beginPath(); ctx.arc(10, -2, 3, 0, Math.PI * 2); ctx.fill();
+                } else {
+                    ctx.strokeStyle = '#3D2814'; ctx.lineWidth = 2;
+                    ctx.beginPath(); ctx.moveTo(4, -4); ctx.lineTo(12, -4); ctx.stroke();
+                }
+                ctx.shadowBlur = 4;
+                ctx.fillStyle = '#D28C4A';
+                ctx.beginPath(); ctx.moveTo(0, 2); ctx.lineTo(-5, 8); ctx.lineTo(5, 8); ctx.closePath(); ctx.fill();
+                ctx.restore();
+                ctx.restore();
+            }
+
+            function drawScene() {
+                ctx.clearRect(0, 0, W, H);
+                const skyGrad = ctx.createLinearGradient(0, 0, 0, H);
+                skyGrad.addColorStop(0, '#6BB8E8');
+                skyGrad.addColorStop(0.7, '#A8D8EA');
+                skyGrad.addColorStop(1, '#7BC043');
+                ctx.fillStyle = skyGrad;
+                ctx.fillRect(0, 0, W, H);
+                drawClouds();
+                drawBabaYaga();
+                drawForest();
+                const chimneyTopX = 499, chimneyTopY = 184;
+                for (let i = 0; i < 6; i++) {
+                    const t = (Date.now() / 1800 + i * 0.7) % 4;
+                    const dx2 = Math.sin(t * 1.8 + i) * 12;
+                    const dy2 = -t * 22;
+                    const radius = 8 + t * 5;
+                    const alpha = Math.max(0, 0.25 - t * 0.05);
+                    ctx.fillStyle = `rgba(210, 210, 215, ${alpha})`;
+                    ctx.beginPath();
+                    ctx.arc(chimneyTopX + dx2, chimneyTopY + dy2, radius, 0, Math.PI * 2);
+                    ctx.fill();
+                }
+                const scale = 1.8;
+                drawHut(scale);
+                drawGrass();
+                drawOwlOnStump();
+                drawSwanOnStump();
+            }
+
+            function animate() {
+                owlHeadAngle += 0.8 * owlHeadDir;
+                if (owlHeadAngle > 45) { owlHeadAngle = 45; owlHeadDir = -1; }
+                if (owlHeadAngle < -45) { owlHeadAngle = -45; owlHeadDir = 1; }
+                blinkTimer += 0.02;
+                if (blinkTimer > 1.5 + Math.random() * 2) {
+                    blinkTimer = 0;
+                    owlBlink = true;
+                    setTimeout(() => { owlBlink = false; }, 150);
+                }
+                windowGlowTimer += 0.02;
+                if (windowGlowTimer > 2.0) {
+                    windowGlowTimer = 0;
+                    windowGlow = !windowGlow;
+                }
+                if (isDoorOpen && doorProgress < 1) {
+                    doorProgress = Math.min(doorProgress + DOOR_SPEED, 1);
+                } else if (!isDoorOpen && doorProgress > 0) {
+                    doorProgress = Math.max(doorProgress - DOOR_SPEED, 0);
+                }
+                clouds.forEach(c => {
+                    c.x += c.speed;
+                    c.y += Math.sin(Date.now() / 800 + c.x * 0.01) * 0.3;
+                    if (c.x > W + 100) { c.x = -100; c.alpha = 0; }
+                });
+                drawScene();
+                requestAnimationFrame(animate);
+            }
+
+            canvas.addEventListener('click', function(e) {
+                const rect = canvas.getBoundingClientRect();
+                const scaleX = canvas.width / rect.width;
+                const scaleY = canvas.height / rect.height;
+                const clickX = (e.clientX - rect.left) * scaleX;
+                const clickY = (e.clientY - rect.top) * scaleY;
+                const doorX = 432, doorY = 326, doorW = 80, doorH = 126;
+                if (clickX >= doorX - 15 && clickX <= doorX + doorW + 15 &&
+                    clickY >= doorY - 15 && clickY <= doorY + doorH + 15) {
+                    isDoorOpen = !isDoorOpen;
+                }
+            });
+
+            canvas.addEventListener('mousemove', function(e) {
+                const rect = canvas.getBoundingClientRect();
+                mouseX = (e.clientX - rect.left) * (canvas.width / rect.width);
+                mouseY = (e.clientY - rect.top) * (canvas.height / rect.height);
+                const scaleX = canvas.width / rect.width;
+                const scaleY = canvas.height / rect.height;
+                const clickX = (e.clientX - rect.left) * scaleX;
+                const clickY = (e.clientY - rect.top) * scaleY;
+                const doorX = 432, doorY = 326, doorW = 80, doorH = 126;
+                if (clickX >= doorX - 15 && clickX <= doorX + doorW + 15 &&
+                    clickY >= doorY - 15 && clickY <= doorY + doorH + 15) {
+                    canvas.style.cursor = 'pointer';
+                } else {
+                    canvas.style.cursor = 'default';
+                }
+            });
+
+            animate();
+        })();
+    });
+</script>
+</body>
+</html>
